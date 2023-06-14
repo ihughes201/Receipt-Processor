@@ -31,6 +31,14 @@ type ReceiptPoints struct {
 	Points int    `json:"points"`
 }
 
+type ResponseId struct {
+	Id string `json:"id"`
+}
+
+type ResponsePoints struct {
+	Points int `json:"points"`
+}
+
 //endregion structs
 
 //region Helper Functions
@@ -121,7 +129,9 @@ func processReceipt(w http.ResponseWriter, r *http.Request) {
 			if success {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-				json.NewEncoder(w).Encode(id)
+				json.NewEncoder(w).Encode(ResponseId{
+					Id: id,
+				})
 				return
 			}
 		}
@@ -147,7 +157,9 @@ func getReceiptPoints(w http.ResponseWriter, r *http.Request) {
 			if points != -1 {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-				json.NewEncoder(w).Encode(points)
+				json.NewEncoder(w).Encode(ResponsePoints{
+					Points: points,
+				})
 				return
 			}
 
