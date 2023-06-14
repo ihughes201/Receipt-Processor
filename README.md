@@ -1,3 +1,33 @@
+# requirements:
+
+Install the uuid repository
+go get github.com/google/uuid
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Receipt Processor
 
 Build a webservice that fulfils the documented API. The API is described below. A formal definition is provided 
