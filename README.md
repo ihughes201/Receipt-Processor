@@ -1,6 +1,7 @@
-# Requirements
+# Requirements and how to run
 uuid package
 	To install run "go get github.com/google/uuid" in a terminal
+To run, run "go run ./ReceiptProcessor.go" in a terminal
 
 # Sending API requests
 * The server is listening on port 8080. 
