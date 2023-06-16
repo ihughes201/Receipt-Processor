@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	"regexp"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/google/uuid"
 )
+
+var receiptCache = make(map[string]int)
 
 //region structs
 
@@ -26,11 +29,6 @@ type Receipt struct {
 	PurchaseTotal  float64        `json:"total,string"`
 }
 
-type ReceiptPoints struct {
-	Id     string `json:"id"`
-	Points int    `json:"points"`
-}
-
 type ResponseId struct {
 	Id string `json:"id"`
 }
@@ -41,8 +39,7 @@ type ResponsePoints struct {
 
 //endregion structs
 
-//region Helper Functions
-
+// Calculate the total number of points a receipt earned.
 func CalculatePoints(receipt Receipt) int {
 	points := 0
 
@@ -98,16 +95,7 @@ func CalculatePoints(receipt Receipt) int {
 	return points
 }
 
-func SaveReceiptPoints(id string, score int) bool {
-	return true
-}
-
-func GetPointsForUuid(uuid string) int {
-	return -1
-}
-
-//endregion Helper Functions
-
+// Validate the URL and process the submitted receipt
 func processReceipt(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/receipts/process" {
 		if r.Method == "POST" {
@@ -124,52 +112,59 @@ func processReceipt(w http.ResponseWriter, r *http.Request) {
 			// Caclulate points for the receipt
 			points := CalculatePoints(receipt)
 			id := uuid.New().String()
+			receiptCache[id] = points
 
-			success := SaveReceiptPoints(id, points)
-			if success {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				json.NewEncoder(w).Encode(ResponseId{
-					Id: id,
-				})
-				return
-			}
+			// Return the id for the processsed receipt
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(ResponseId{
+				Id: id,
+			})
+			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
+		// return bad request if the receipt could not be processed
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode("The receipt is invalid")
+		fmt.Fprintf(w, "The receipt is invalid\n")
 		return
 	}
-
 }
 
+// return the receipt points for an id or Not Found
 func getReceiptPoints(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		// For each alpha numeric character in the retailer name, add 1 point
-		// Note: does not include characters with accents
-		reg, err := regexp.Compile("/receipts/([a-zA-Z0-9]+)/points")
+		// Check if the id passed in matches the form we expect.
+		// alphanum and a "-"
+		reg, err := regexp.Compile("/receipts/([a-zA-Z0-9-]+)/points")
 		// if there are no errors creating the regex criteria, process the retailer name
 		if err == nil {
-			receiptUuid := reg.FindStringSubmatch(r.URL.Path)[1]
+			var urlmatch = reg.FindStringSubmatch(r.URL.Path)
 
-			points := GetPointsForUuid(receiptUuid)
-			if points != -1 {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				json.NewEncoder(w).Encode(ResponsePoints{
-					Points: points,
-				})
+			// If the url matches the expected form
+			if urlmatch != nil {
+				receiptUuid := urlmatch[1]
+				points, found := receiptCache[receiptUuid]
+
+				// If the id does exist in the map, return the points
+				if found {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(ResponsePoints{
+						Points: points,
+					})
+					return
+				}
+				// If the id is invalid or if no score was found, return not found
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprintf(w, "No receipt found for that id\n")
 				return
 			}
-
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode("No receipt found for that id")
-		return
 	}
+
+	// If the id is invalid or if no score was found, return page not found
+	w.WriteHeader(http.StatusNotFound)
+	fmt.Fprintf(w, "404 page not found\n")
 }
 
 func main() {
