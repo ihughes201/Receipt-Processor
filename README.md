@@ -7,11 +7,11 @@ uuid package
 	Issue the API requests like localhost:8080/receipts
 
 ## Receipts
-A receipt is invalid if:
+### A receipt is invalid if:
 * Any price is empty, null, or not a valid dollar amount.
 	* If the price is missing completely, that is okay.
 
-A receipt will still be processed if:
+### A receipt will still be processed if:
 * The date is not in the format "yyyy-MM-dd"
 	* The date points will not be included if the format is incorrect
 * The time is not in the format "hh:mm"
